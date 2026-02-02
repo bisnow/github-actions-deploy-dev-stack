@@ -1,0 +1,124 @@
+name: 'Deploy Dev Stack'
+description: 'Deploy a dev environment with CloudFormation and Helm'
+
+inputs:
+  release-name:
+    description: 'Release name (must start with dev-)'
+    required: true
+  tag:
+    description: 'Image tag to deploy'
+    required: true
+  service-name:
+    description: 'Service name (e.g., hello-k8s)'
+    required: true
+  namespace:
+    description: 'Kubernetes namespace'
+    required: false
+    default: 'bisnow-apps'
+  eks-cluster:
+    description: 'EKS cluster name'
+    required: false
+    default: 'bisnow-non-prod-eks'
+  helm-release-path:
+    description: 'Path to HelmRelease YAML for values'
+    required: true
+  ecr-registry:
+    description: 'ECR registry'
+    required: false
+    default: '560285300220.dkr.ecr.us-east-1.amazonaws.com'
+  aws-account:
+    description: 'AWS account for role assumption'
+    required: false
+    default: 'bisnow'
+  cloudformation-template:
+    description: 'Path to CloudFormation template'
+    required: false
+    default: './aws-resources.yaml'
+  helm-chart-version:
+    description: 'Helm chart version'
+    required: false
+    default: '4.1.5'
+
+outputs:
+  hostname:
+    description: 'The deployed hostname'
+    value: ${{ steps.deploy.outputs.hostname }}
+  release-name:
+    description: 'Full Helm release name'
+    value: ${{ steps.deploy.outputs.release-name }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate release name starts with dev-
+      shell: bash
+      run: |
+        if [[ ! "${{ inputs.release-name }}" =~ ^dev- ]]; then
+          echo "Error: release-name must start with 'dev-' (e.g., dev-1, dev-23)"
+          exit 1
+        fi
+        echo "Release name '${{ inputs.release-name }}' is valid"
+
+    - name: Validate image exists in ECR
+      uses: bisnow/github-actions-validate-release@v1.1
+      with:
+        tag: ${{ inputs.tag }}
+        ECR_REGISTRY: ${{ inputs.ecr-registry }}/${{ inputs.service-name }}
+
+    - name: Log into AWS
+      uses: bisnow/github-actions-assume-role-for-environment@v2.1
+      with:
+        aws-account: ${{ inputs.aws-account }}
+
+    - name: Deploy to AWS CloudFormation
+      uses: aws-actions/aws-cloudformation-github-deploy@v1
+      with:
+        name: ${{ inputs.release-name }}-${{ inputs.service-name }}
+        template: ${{ inputs.cloudformation-template }}
+        parameter-overrides: "Environment=${{ inputs.release-name }},EksClusterStackName=${{ inputs.eks-cluster }},Namespace=${{ inputs.namespace }}"
+        tags: '[{"Key": "cdci","Value":"github"},{"Key": "Environment","Value":"${{ inputs.release-name }}"},{"Key": "Service","Value":"${{ inputs.service-name }}"}]'
+        capabilities: CAPABILITY_NAMED_IAM
+        no-fail-on-empty-changeset: "1"
+
+    - name: Configure kubectl
+      shell: bash
+      run: |
+        aws eks update-kubeconfig --name ${{ inputs.eks-cluster }} --region us-east-1
+
+    - name: Login to ECR for Helm
+      shell: bash
+      run: |
+        aws ecr get-login-password --region us-east-1 | helm registry login --username AWS --password-stdin ${{ inputs.ecr-registry }}
+
+    - name: Extract values and deploy
+      id: deploy
+      shell: bash
+      run: |
+        RELEASE_NAME="${{ inputs.release-name }}-${{ inputs.service-name }}"
+
+        # Extract spec.values from HelmRelease YAML using kubectl + jq
+        kubectl create -f ${{ inputs.helm-release-path }} --dry-run=client -o json | jq '.spec.values' > /tmp/values.json
+
+        # Build dynamic hostname and role ARN
+        HOSTNAME="${{ inputs.release-name }}-${{ inputs.service-name }}.non-prod.bisnow.cloud"
+        ROLE_ARN="arn:aws:iam::560285300220:role/${{ inputs.release-name }}-${{ inputs.service-name }}"
+
+        echo "Deploying $RELEASE_NAME with tag ${{ inputs.tag }}"
+        echo "Hostname: $HOSTNAME"
+        echo "Role ARN: $ROLE_ARN"
+
+        helm upgrade --install "$RELEASE_NAME" \
+          oci://${{ inputs.ecr-registry }}/laravel-app-chart \
+          --version ${{ inputs.helm-chart-version }} \
+          --namespace ${{ inputs.namespace }} \
+          --values /tmp/values.json \
+          --set image.tag=${{ inputs.tag }} \
+          --set global.name=${{ inputs.service-name }} \
+          --set global.environment=${{ inputs.release-name }} \
+          --set "ingress.default.hosts[0]=$HOSTNAME" \
+          --set serviceAccount.roleArn=$ROLE_ARN \
+          --wait --timeout 10m
+
+        echo "hostname=$HOSTNAME" >> $GITHUB_OUTPUT
+        echo "release-name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+
