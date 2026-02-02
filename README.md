@@ -9,13 +9,6 @@ This action automates the deployment of development stacks by:
 2. Creating AWS infrastructure via CloudFormation
 3. Deploying the application to EKS using Helm
 
-## Prerequisites
-
-- AWS account with appropriate IAM permissions
-- EKS cluster configured
-- ECR registry with Docker images
-- Helm chart available in ECR
-- CloudFormation template for AWS resources
 
 ## Inputs
 

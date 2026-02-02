@@ -139,7 +139,6 @@ runs:
         | Property | Value |
         |----------|-------|
         | Release Name | \`$RELEASE_NAME\` |
-        | Service | \`${{ inputs.service-name }}\` |
         | Image Tag | \`${{ inputs.tag }}\` |
         | Namespace | \`${{ inputs.namespace }}\` |
         | EKS Cluster | \`${{ inputs.eks-cluster }}\` |
