@@ -122,3 +122,38 @@ runs:
         echo "hostname=$HOSTNAME" >> $GITHUB_OUTPUT
         echo "release-name=$RELEASE_NAME" >> $GITHUB_OUTPUT
 
+    - name: Generate deployment summary
+      shell: bash
+      run: |
+        HOSTNAME="${{ inputs.release-name }}-${{ inputs.service-name }}.non-prod.bisnow.cloud"
+        RELEASE_NAME="${{ inputs.release-name }}-${{ inputs.service-name }}"
+        ROLE_ARN="arn:aws:iam::560285300220:role/${{ inputs.release-name }}-${{ inputs.service-name }}"
+        
+        cat >> $GITHUB_STEP_SUMMARY <<EOF
+        ## Dev Stack Deployment Complete
+        
+        ### Application URL
+        **https://$HOSTNAME**
+        
+        ### Deployment Details
+        | Property | Value |
+        |----------|-------|
+        | Release Name | \`$RELEASE_NAME\` |
+        | Service | \`${{ inputs.service-name }}\` |
+        | Image Tag | \`${{ inputs.tag }}\` |
+        | Namespace | \`${{ inputs.namespace }}\` |
+        | EKS Cluster | \`${{ inputs.eks-cluster }}\` |
+        | Helm Chart Version | \`${{ inputs.helm-chart-version }}\` |
+        
+        ### AWS Resources
+        | Resource | ARN/Name |
+        |----------|----------|
+        | IAM Role | \`$ROLE_ARN\` |
+        | CloudFormation Stack | \`$RELEASE_NAME\` |
+        
+        ### Next Steps
+        - Access your application at https://$HOSTNAME
+        - Monitor deployment: \`kubectl get pods -n ${{ inputs.namespace }} -l app.kubernetes.io/instance=$RELEASE_NAME\`
+        - View logs: \`kubectl logs -n ${{ inputs.namespace }} -l app.kubernetes.io/instance=$RELEASE_NAME\`
+        EOF
+
