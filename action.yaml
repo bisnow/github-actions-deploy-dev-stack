@@ -22,7 +22,7 @@ inputs:
   helm-release-path:
     description: 'Path to HelmRelease YAML for values'
     required: false
-    default: '.k8s/non-prod/${{ inputs.service-name }}-helm-release.yaml'
+    default: ''
   ecr-registry:
     description: 'ECR registry'
     required: false
@@ -101,8 +101,15 @@ runs:
       run: |
         RELEASE_NAME="${{ inputs.release-name }}-${{ inputs.service-name }}"
 
+        # Set default helm-release-path if not provided
+        HELM_RELEASE_PATH="${{ inputs.helm-release-path }}"
+        if [ -z "$HELM_RELEASE_PATH" ]; then
+          HELM_RELEASE_PATH=".k8s/non-prod/${{ inputs.service-name }}-helm-release.yaml"
+          echo "Using default helm-release-path: $HELM_RELEASE_PATH"
+        fi
+
         # Extract spec.values from HelmRelease YAML using kubectl + jq
-        kubectl create -f ${{ inputs.helm-release-path }} --dry-run=client -o json | jq '.spec.values' > /tmp/values.json
+        kubectl create -f "$HELM_RELEASE_PATH" --dry-run=client -o json | jq '.spec.values' > /tmp/values.json
 
         # Build dynamic hostname and role ARN
         HOSTNAME="${{ inputs.release-name }}-${{ inputs.service-name }}.non-prod.bisnow.cloud"
