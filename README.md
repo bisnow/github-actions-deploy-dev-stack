@@ -17,7 +17,7 @@ This action automates the deployment of development stacks by:
 | `release-name` | Release name (must start with `dev-`) | Yes | - |
 | `tag` | Docker image tag to deploy | Yes | - |
 | `service-name` | Service name (e.g., `hello-k8s`) | Yes | - |
-| `helm-release-path` | Path to HelmRelease YAML for values | Yes | - |
+| `helm-release-path` | Path to HelmRelease YAML for values | No | `.k8s/non-prod/{service-name}-helm-release.yaml` |
 | `namespace` | Kubernetes namespace | No | `bisnow-apps` |
 | `eks-cluster` | EKS cluster name | No | `bisnow-non-prod-eks` |
 | `ecr-registry` | ECR registry URL | No | `560285300220.dkr.ecr.us-east-1.amazonaws.com` |
@@ -42,7 +42,7 @@ This action automates the deployment of development stacks by:
     release-name: dev-123
     tag: v1.2.3
     service-name: my-service
-    helm-release-path: ./helm/release.yaml
+    # helm-release-path defaults to .k8s/non-prod/my-service-helm-release.yaml
 ```
 
 ### Complete Example
@@ -69,7 +69,7 @@ jobs:
           release-name: dev-${{ github.event.inputs.dev-number }}
           tag: ${{ github.sha }}
           service-name: hello-k8s
-          helm-release-path: ./k8s/helmrelease.yaml
+          # helm-release-path uses default: .k8s/non-prod/hello-k8s-helm-release.yaml
           namespace: bisnow-apps
           eks-cluster: bisnow-non-prod-eks
 ```

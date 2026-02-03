@@ -21,7 +21,8 @@ inputs:
     default: 'bisnow-non-prod-eks'
   helm-release-path:
     description: 'Path to HelmRelease YAML for values'
-    required: true
+    required: false
+    default: '.k8s/non-prod/${{ inputs.service-name }}-helm-release.yaml'
   ecr-registry:
     description: 'ECR registry'
     required: false
