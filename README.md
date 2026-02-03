@@ -24,6 +24,7 @@ This action automates the deployment of development stacks by:
 | `aws-account` | AWS account for role assumption | No | `bisnow` |
 | `cloudformation-template` | Path to CloudFormation template | No | `./aws-resources.yaml` |
 | `helm-chart-version` | Helm chart version | No | `4.1.5` |
+| `helm-set-values` | Additional Helm `--set` values, one per line | No | - |
 
 ## Outputs
 
@@ -72,6 +73,25 @@ jobs:
           namespace: bisnow-apps
           eks-cluster: bisnow-non-prod-eks
 ```
+
+### Using Custom Helm Values
+
+The `helm-set-values` input allows you to override Helm chart values at deployment time. This is commonly used to configure environment-specific settings like SQS queue URLs:
+
+```yaml
+- name: Deploy dev stack with custom SQS queues
+  uses: bisnow/github-actions-deploy-dev-stack@main
+  with:
+    release-name: dev-1
+    tag: rc-47
+    service-name: hello-k8s
+    helm-release-path: .k8s/non-prod/hello-k8s-helm-release.yaml
+    helm-set-values: |
+      workers.default.keda.queueURL=https://sqs.us-east-1.amazonaws.com/560285300220/dev-1-hello-k8s-default
+      workers.default.args={artisan,queue:work,sqs,--sleep=3,--tries=3,--queue=dev-1-hello-k8s-default}
+```
+
+Each line in `helm-set-values` is passed as a separate `--set` flag to the Helm upgrade command.
 
 ## What It Does
 
