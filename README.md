@@ -61,7 +61,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Deploy dev stack
         uses: bisnow/github-actions-deploy-dev-stack@v1
@@ -122,9 +122,9 @@ The action creates the following resources:
 ## Dependencies
 
 This action uses the following actions:
-- `bisnow/github-actions-validate-release@v1.1`
-- `bisnow/github-actions-assume-role-for-environment@v2.1`
-- `aws-actions/aws-cloudformation-github-deploy@v1`
+- `bisnow/github-actions-validate-release@v1`
+- `bisnow/github-actions-assume-role-for-environment@v2`
+- `aws-actions/aws-cloudformation-github-deploy@v2`
 
 ## Versioning
 

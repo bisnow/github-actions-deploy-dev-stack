@@ -65,13 +65,13 @@ runs:
         echo "Release name '${{ inputs.release-name }}' is valid"
 
     - name: Validate image exists in ECR
-      uses: bisnow/github-actions-validate-release@v1.1
+      uses: bisnow/github-actions-validate-release@v1
       with:
         tag: ${{ inputs.tag }}
         ECR_REGISTRY: ${{ inputs.ecr-registry }}/${{ inputs.service-name }}
 
     - name: Log into AWS
-      uses: bisnow/github-actions-assume-role-for-environment@v2.1
+      uses: bisnow/github-actions-assume-role-for-environment@v2
       with:
         aws-account: ${{ inputs.aws-account }}
 
